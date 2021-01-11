@@ -119,7 +119,7 @@ class SkipList : public Opt<K, V> {
     if (curNode->key == dKey) {
       for (int level = 1; level <= cur_max_level; level++) {
         if (update[level]->_forward[level] != curNode) {
-		  break;
+          break;
         }
         update[level]->_forward[level] = curNode->_forward[level];
       }
@@ -155,11 +155,11 @@ class SkipList : public Opt<K, V> {
   }
 
   bool isEmpty() { return p_listHead->_forward[0] == p_listTail; }
-  virtual ULL NumElements() { return _n; }
-  virtual void SetSize(const unsigned long size) { _max_size = size; }
+  ULL NumElements() { return _n; }
+  void SetSize(const unsigned long size) { _max_size = size; }
   size_t GetBytesSize() { return _n * (sizeof(K) + sizeof(V)); }
 
-  virtual std::vector<kvPair<K, V>> GetAll() {
+  std::vector<kvPair<K, V>> GetAll() {
     std::vector<kvPair<K, V>> ret = std::vector<kvPair<K, V>>();
     Node *node = p_listHead->_forward[1];
     while (node != p_listTail) {
@@ -170,7 +170,7 @@ class SkipList : public Opt<K, V> {
     return ret;
   }
 
-  virtual std::vector<kvPair<K, V>> GetAllInRange(const K &k1, const K &k2) {
+  std::vector<kvPair<K, V>> GetAllInRange(const K &k1, const K &k2) {
     if (k1 > _max || k2 < _min) {
       return {};
     }

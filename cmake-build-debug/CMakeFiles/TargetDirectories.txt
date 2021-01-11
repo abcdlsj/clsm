@@ -1,3 +1,0 @@
-/home/abcdlsj/github/database/lsmtree/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/abcdlsj/github/database/lsmtree/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/abcdlsj/github/database/lsmtree/cmake-build-debug/CMakeFiles/lsmtree.dir
