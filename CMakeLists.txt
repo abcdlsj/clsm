@@ -8,4 +8,5 @@ include_directories(src)
 add_executable(lsmtree
         src/opt.hpp
         src/skip_list.hpp
-        main.cpp src/bloom_filter.hpp)
+        src/bloom_filter.hpp
+        main.cpp)
