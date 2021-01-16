@@ -6,12 +6,12 @@
 #include <cstring>
 #include <random>
 
-#include "opt.hpp"
+#include "run.hpp"
 
 std::default_random_engine generator;
 std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
-template <class K, class V, unsigned MAXLEAVEL>
+template <class K, class V, unsigned int MAXLEAVEL>
 class SNode {
  public:
   const K key;
@@ -31,7 +31,7 @@ class SNode {
 };
 
 template <typename K, typename V, int MAXLEVEL = 20>
-class SkipList : public Opt<K, V> {
+class SkipList : public Run<K, V> {
  public:
   typedef SNode<K, V, MAXLEVEL> Node;
   const int maxLevel;
@@ -39,14 +39,14 @@ class SkipList : public Opt<K, V> {
 
   K minKey, maxKey;
   ULL _n;
-  size_t _max_size;
-  int cur_max_level;
+  size_t _maxSize;
+  int curMaxLevel;
   Node *p_listHead, *p_listTail;
 
   SkipList(const K minKey, const K maxKey)
       : p_listHead(nullptr),
         p_listTail(nullptr),
-        cur_max_level(1),
+        curMaxLevel(1),
         maxLevel(MAXLEVEL),
         _min(static_cast<K>(NULL)),
         _max(static_cast<K>(NULL)),
@@ -80,7 +80,7 @@ class SkipList : public Opt<K, V> {
     _min = std::min(_min, iKey);
 
     Node *update[MAXLEVEL], *curNode = p_listHead;
-    for (int level = cur_max_level; level > 0; level--) {
+    for (int level = curMaxLevel; level > 0; level--) {
       while (curNode->_forward[level]->key < iKey) {
         curNode = curNode->_forward[level];
       }
@@ -91,14 +91,14 @@ class SkipList : public Opt<K, V> {
       curNode->value = iValue;
     } else {
       int insert_level = GenNodeLevel();
-      if (insert_level > cur_max_level && insert_level < MAXLEVEL - 1) {
-        for (int level = cur_max_level + 1; level <= insert_level; level++) {
+      if (insert_level > curMaxLevel && insert_level < MAXLEVEL - 1) {
+        for (int level = curMaxLevel + 1; level <= insert_level; level++) {
           update[level] = p_listHead;
         }
-        cur_max_level = insert_level;
+        curMaxLevel = insert_level;
       }
       curNode = new Node(iKey, iValue);
-      for (int level = 1; level <= cur_max_level; level++) {
+      for (int level = 1; level <= curMaxLevel; level++) {
         curNode->_forward[level] = update[level]->_forward[level];
         update[level]->_forward[level] = curNode;
       }
@@ -109,7 +109,7 @@ class SkipList : public Opt<K, V> {
   void DeleteKey(const K &dKey) {
     Node *update[MAXLEVEL], *curNode = p_listHead;
 
-    for (int level = cur_max_level; level > 0; level--) {
+    for (int level = curMaxLevel; level > 0; level--) {
       while (curNode->_forward[level]->key < dKey) {
         curNode = curNode->_forward[level];
       }
@@ -117,16 +117,15 @@ class SkipList : public Opt<K, V> {
     }
     curNode = curNode->_forward[1];
     if (curNode->key == dKey) {
-      for (int level = 1; level <= cur_max_level; level++) {
+      for (int level = 1; level <= curMaxLevel; level++) {
         if (update[level]->_forward[level] != curNode) {
           break;
         }
         update[level]->_forward[level] = curNode->_forward[level];
       }
       delete curNode;
-      while (cur_max_level > 1 &&
-             p_listHead->_forward[cur_max_level] == nullptr) {
-        cur_max_level--;
+      while (curMaxLevel > 1 && p_listHead->_forward[curMaxLevel] == nullptr) {
+        curMaxLevel--;
       }
     }
     --_n;
@@ -134,7 +133,7 @@ class SkipList : public Opt<K, V> {
 
   V Search(const K &sKey, bool &isFound) {
     Node *curNode = p_listHead;
-    for (int level = cur_max_level; level >= 1; level--) {
+    for (int level = curMaxLevel; level >= 1; level--) {
       while (curNode->_forward[level]->key < sKey) {
         curNode = curNode->_forward[level];
       }
@@ -156,7 +155,7 @@ class SkipList : public Opt<K, V> {
 
   bool isEmpty() { return p_listHead->_forward[0] == p_listTail; }
   ULL NumElements() { return _n; }
-  void SetSize(const unsigned long size) { _max_size = size; }
+  void SetSize(const unsigned long size) { _maxSize = size; }
   size_t GetBytesSize() { return _n * (sizeof(K) + sizeof(V)); }
 
   std::vector<kvPair<K, V>> GetAll() {
@@ -188,7 +187,7 @@ class SkipList : public Opt<K, V> {
     return ret;
   }
 
-  int GenNodeLevel() {  return ffs(rand() & ((1 << MAXLEVEL) - 1)) - 1; }
+  int GenNodeLevel() { return ffs(rand() & ((1 << MAXLEVEL) - 1)) - 1; }
 };
 
-#endif // LSMTREE_SKIP_LIST_HPP
+#endif  // LSMTREE_SKIP_LIST_HPP

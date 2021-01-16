@@ -17,8 +17,9 @@ template <class Key>
 class BloomFilter {
  public:
   BloomFilter(uint64_t _n, double _p) {
-    double m = -1 * static_cast<double>(_n) * log(_p) / 0.480453013918201; // 0.480453013918201 = ln(2) ^ 2;
-    k = ceil((m / _n) * 0.693147180559945); // 0.693147180559945 = ln(2);
+    double m = -1 * static_cast<double>(_n) * log(_p) /
+               0.480453013918201;            // 0.480453013918201 = ln(2) ^ 2;
+    k = ceil((m / _n) * 0.693147180559945);  // 0.693147180559945 = ln(2);
     b = std::vector<bool>(static_cast<int>(m));
   }
 

@@ -33,3 +33,4 @@
 
 .ccls-cache/*
 build/*
+.idea/*

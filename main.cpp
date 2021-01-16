@@ -1,26 +1,15 @@
+#include <ctime>
 #include <iostream>
+#include <random>
 
 #include "src/bloom_filter.hpp"
+#include "src/hash_map.hpp"
+#include "src/lsm.hpp"
 #include "src/skip_list.hpp"
 
 using namespace std;
 
 struct timespec start, finish;
-
-void SkipListTest() {
-  auto *skp = new SkipList<int, int>(1, 100);
-  for (int i = 0; i < 100; i++) {
-    skp->InsertKey(i, i * 100);
-  }
-
-  for (int i = 0; i < 50; i++) {
-    skp->DeleteKey(i);
-  }
-  auto vec = skp->GetAllInRange(75, 100);
-  for (auto &e : vec) {
-    std::cout << e.key << " " << e.value << std::endl;
-  }
-}
 
 void bloomFilterTest() {
   std::random_device rand_dev;
@@ -60,4 +49,4 @@ void bloomFilterTest() {
   cout << "FP rate: " << ((double)fp / double(num_inserts)) << endl;
 }
 
-int main() { bloomFilterTest(); }
+int main() {}

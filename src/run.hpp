@@ -4,6 +4,7 @@
 #include <vector>
 
 typedef long long LL;
+typedef unsigned long UL;
 typedef unsigned long long ULL;
 
 template <typename K, typename V>
@@ -21,8 +22,9 @@ class kvPair {
   bool operator>(kvPair kv) const { return key > kv.key; }
 };
 
+// Run 代表了 LSM Tree 的执行单元
 template <class K, class V>
-class Opt {
+class Run {
  public:
   virtual K GetMin() = 0;
   virtual K GetMax() = 0;
@@ -33,7 +35,7 @@ class Opt {
   virtual void SetSize(unsigned long size) = 0;
   virtual std::vector<kvPair<K, V>> GetAll() = 0;
   virtual std::vector<kvPair<K, V>> GetAllInRange(const K &k1, const K &k2) = 0;
-  virtual ~Opt() = default;
+  virtual ~Run() = default;
 };
 
-#endif // LSMTREE_OPT_HPP
+#endif  // LSMTREE_OPT_HPP
