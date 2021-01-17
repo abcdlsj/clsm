@@ -30,7 +30,7 @@ class SNode {
   virtual ~SNode(){};
 };
 
-template <typename K, typename V, int MAXLEVEL = 20>
+template <class K, class V, int MAXLEVEL = 20>
 class SkipList : public Run<K, V> {
  public:
   typedef SNode<K, V, MAXLEVEL> Node;
@@ -72,10 +72,10 @@ class SkipList : public Run<K, V> {
     delete p_listTail;
   }
 
-  K GetMax() { return _max; }
-  K GetMin() { return _min; }
+  K getMax() { return _max; }
+  K getMin() { return _min; }
 
-  void InsertKey(const K &iKey, const V &iValue) {
+  void insertKey(const K &iKey, const V &iValue) {
     _max = std::max(_max, iKey);
     _min = std::min(_min, iKey);
 
@@ -106,7 +106,7 @@ class SkipList : public Run<K, V> {
     }
   }
 
-  void DeleteKey(const K &dKey) {
+  void deleteKey(const K &dKey) {
     Node *update[MAXLEVEL], *curNode = p_listHead;
 
     for (int level = curMaxLevel; level > 0; level--) {
@@ -131,7 +131,7 @@ class SkipList : public Run<K, V> {
     --_n;
   };
 
-  V Search(const K &sKey, bool &isFound) {
+  V search(const K &sKey, bool &isFound) {
     Node *curNode = p_listHead;
     for (int level = curMaxLevel; level >= 1; level--) {
       while (curNode->_forward[level]->key < sKey) {
@@ -154,9 +154,9 @@ class SkipList : public Run<K, V> {
   }
 
   bool isEmpty() { return p_listHead->_forward[0] == p_listTail; }
-  ULL NumElements() { return _n; }
-  void SetSize(const unsigned long size) { _maxSize = size; }
-  size_t GetBytesSize() { return _n * (sizeof(K) + sizeof(V)); }
+  ULL eltsNums() { return _n; }
+  void setSize(const unsigned long size) { _maxSize = size; }
+  size_t getBytesSize() { return _n * (sizeof(K) + sizeof(V)); }
 
   std::vector<kvPair<K, V>> GetAll() {
     std::vector<kvPair<K, V>> ret = std::vector<kvPair<K, V>>();
@@ -169,7 +169,7 @@ class SkipList : public Run<K, V> {
     return ret;
   }
 
-  std::vector<kvPair<K, V>> GetAllInRange(const K &k1, const K &k2) {
+  std::vector<kvPair<K, V>> getAllInRange(const K &k1, const K &k2) {
     if (k1 > _max || k2 < _min) {
       return {};
     }

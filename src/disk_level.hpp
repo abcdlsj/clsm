@@ -75,29 +75,33 @@ class DiskLevel {
   unsigned int _activeRunIdx;  // index of active run;
   unsigned int _mergeSize;     // # of runs to merge downloads;
   UL _runSize;                 // number of elements in a run;
-  double _bfFalsePostive;
+  double _bfFalsePositive;
 
   std::vector<DiskRun<K, V> *> runs;
 
   DiskLevel<K, V>(unsigned int blockSize, int level, UL runSize,
                   unsigned int numRuns, unsigned int mergeSize,
-                  double bfFalsePostive)
+                  double bfFalsePositive)
       : _blockSize(blockSize),
         _level(level),
         _runSize(runSize),
         _numRuns(numRuns),
         _mergeSize(mergeSize),
-        _bfFalsePostive(bfFalsePostive) {
+        _bfFalsePositive(bfFalsePositive) {
     KVPMAX = KVPair_t{INT_MAX, 0};
     KVPINTMAX = KVIntPair_t(KVPMAX, -1);
     for (auto i = 0; i < _numRuns; i++) {
       DiskRun<K, V> *run =
-          new DiskRun<K, V>(_runSize, _blockSize, _level, i, _bfFalsePostive);
+          new DiskRun<K, V>(_runSize, _blockSize, _level, i, _bfFalsePositive);
       runs.push_back(run);
     }
   }
 
-  ~DiskLevel<K, V>() { delete[] runs; }
+  ~DiskLevel<K, V>() {
+    for (auto i = 0; i < runs.size(); i++) {
+      delete runs[i];
+    }
+  }
 
   void addRuns(std::vector<DiskRun<K, V> *> &runList, const UL runlen,
                bool isLastLevel) {
@@ -106,13 +110,13 @@ class DiskLevel {
     std::vector<int> heads(runList.size(), 0);
     for (auto i = 0; i < runList.size(); i++) {
       KVPair_t kvp = runList[i]->map[0];
-      h.psuh(KVIntPair_t(kvp, i));
+      h.push(KVIntPair_t(kvp, i));
     }
 
     int j = -1;
     K lastKey = INT_MAX;
     unsigned int lastK = INT_MIN;
-    while (h.size() != 0) {
+    while (h.size != 0) {
       auto val_run_pair = h.pop();
       if (lastKey == val_run_pair.first.key) {
         if (lastK < val_run_pair.second) {
@@ -189,7 +193,7 @@ class DiskLevel {
 
     for (auto i = _activeRunIdx; i < _numRuns; i++) {
       DiskRun<K, V> *newRun =
-          new DiskRun<K, V>(_runSize, _blockSize, _level, i, _bfFalsePostive);
+          new DiskRun<K, V>(_runSize, _blockSize, _level, i, _bfFalsePositive);
       runs.push_back(newRun);
     }
   }
@@ -202,7 +206,7 @@ class DiskLevel {
     int maxRunToSearch = _activeRunIdx - 1;
     for (auto i = maxRunToSearch; i >= 0; i--) {
       if (runs[i]->maxKey == INT_MIN || key < runs[i]->minKey ||
-          key > runs[i]->maxKey || !runs[i]->bf.isContain(&key, sizeof(key))) {
+          key > runs[i]->maxKey || !runs[i]->bf.isContained(&key, sizeof(key))) {
         continue;
       }
 
@@ -215,7 +219,7 @@ class DiskLevel {
     return static_cast<V>(NULL);
   }
 
-  UL num_elements() {
+  UL eltsNums() {
     UL sum = 0;
     for (auto i = 0; i < _activeRunIdx; i++) sum += runs[i]->getCapacity();
     return sum;

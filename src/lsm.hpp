@@ -17,7 +17,7 @@ class LSM {
   UL _n;
   double _fracRunsMerged;
 
-  double _bfFalsePostive;
+  double _bfFalsePositive;
   unsigned int _activeRunIdx;
 
   unsigned int _numRuns;
@@ -46,22 +46,22 @@ class LSM {
         _diskRunsPerLevel(diskRunsPerLevel),
         _numToMerge(ceil(_fracRunsMerged * _numRuns)),
         _blockSize(blockSize),
-        _bfFalsePostive(bfFalsePostive),
+        _bfFalsePositive(bfFalsePostive),
         _activeRunIdx(0),
         _n(0) {
     DiskLevel<K, V> &diskLevel = new DiskLevel<K, V>(
         blockSize, 1, _numToMerge * _eltsPerRun, _diskRunsPerLevel,
-        ceil(_diskRunsPerLevel * _fracRunsMerged), _bfFalsePostive);
+        ceil(_diskRunsPerLevel * _fracRunsMerged), _bfFalsePositive);
 
     diskLevels.push_back(diskLevel);
     _numDiskLevels = 1;
 
     for (auto i = 0; i < _numRuns; i++) {
       RunType *run = new RunType(INT32_MIN, INT32_MAX);
-      run->SetSize(_eltsPerRun);
+      run->setSize(_eltsPerRun);
       C_0.push_back(run);
 
-      BloomFilter<K> *bf = new BloomFilter<K>(_eltsPerRun, _bfFalsePostive);
+      BloomFilter<K> *bf = new BloomFilter<K>(_eltsPerRun, _bfFalsePositive);
       filters.push_back(bf);
     }
 
@@ -83,8 +83,8 @@ class LSM {
     }
   }
 
-  void InsertKey(K &key, V &value) {
-    if (C_0[_activeRunIdx]->num_elements >= _eltsPerRun) {
+  void insertKey(K &key, V &value) {
+    if (C_0[_activeRunIdx]->eltsNums() >= _eltsPerRun) {
       ++_activeRunIdx;
     }
 
@@ -92,18 +92,18 @@ class LSM {
       doMerge();
     }
 
-    C_0[_activeRunIdx]->InsertKey(key, value);
+    C_0[_activeRunIdx]->insertKey(key, value);
   }
 
-  bool Search(K &key, V &value) {
+  bool search(K &key, V &value) {
     bool isFound = false;
     for (auto i = _activeRunIdx; i >= 0; i--) {
-      if (key < C_0[i]->GetMin() || key > C_0[i]->GetMax() ||
-          !filters[i]->isContain(&key, sizeof(key))) {
+      if (key < C_0[i]->getMin() || key > C_0[i]->getMax() ||
+          !filters[i]->isContained(&key, sizeof(key))) {
         continue;
       }
 
-      value = C_0[i]->Search(key, isFound);
+      value = C_0[i]->search(key, isFound);
       if (isFound) {
         return value != V_STONE;
       }
@@ -114,7 +114,7 @@ class LSM {
     }
 
     for (auto i = 0; i < _numDiskLevels; i++) {
-      value = diskLevels[i]->lookup(key, isFound);
+      value = diskLevels[i]->search(key, isFound);
       if (isFound) {
         return value != V_STONE;
       }
@@ -123,7 +123,7 @@ class LSM {
     return false;
   }
 
-  void deleteKey(K &key) { InsertKey(key, V_STONE); }
+  void deleteKey(K &key) { insertKey(key, V_STONE); }
 
   std::vector<kvPair<K, V>> range(K &k1, K &k2) {
     if (k2 <= k1) {
@@ -134,13 +134,12 @@ class LSM {
     std::vector<kvPair<K, V>> elts_in_range = std::vector<kvPair<K, V>>();
 
     for (auto i = _activeRunIdx; i >= 0; i--) {
-      std::vector<kvPair<K, V>> cur_elts = C_0[i]->GetAllInRange(k1, k2);
+      std::vector<kvPair<K, V>> cur_elts = C_0[i]->getAllInRange(k1, k2);
       if (cur_elts.size() != 0) {
         elts_in_range.reserve(elts_in_range.size() + cur_elts.size());
 
         for (auto j = 0; j < cur_elts.size(); j++) {
-          V dummy =
-              hashtable.putAndReturnValue(cur_elts[j].key, cur_elts[j].value);
+          V dummy = hashtable.putIfEmpty(cur_elts[j].key, cur_elts[j].value);
           if (!dummy && cur_elts[j].value != V_STONE) {
             elts_in_range.push_back(cur_elts[j]);
           }
@@ -162,7 +161,7 @@ class LSM {
           elts_in_range.reverse(oldSize + (i2 - i1));
           for (UL k = i1; k < i2; k++) {
             auto kv = diskLevels[i]->runs[j]->map[k];
-            V dummy = hashtable.putAndReturnValue(kv.key, kv.value);
+            V dummy = hashtable.putIfEmpty(kv.key, kv.value);
             if (!dummy && kv.value != V_STONE) {
               elts_in_range.push_back(kv);
             }
@@ -179,7 +178,7 @@ class LSM {
     std::cout << "MEMORY BUFFER:\n";
     for (auto i = 0; i < _activeRunIdx; i++) {
       std::cout << "MEMORY BUFFER RUN: " << i << std::endl;
-      auto all = C_0[i]->GetAll();
+      auto all = C_0[i]->getAll();
       for (auto &c : all) {
         std::cout << c.key << ":" << c.value << " ";
       }
@@ -205,11 +204,11 @@ class LSM {
   void printStats() {
     std::cout << "Number of Elements: " << size() << std::endl;
     std::cout << "Number of Elements in Buffer (including deletes): "
-              << num_buffer() << std::endl;
+              << bufferNums() << std::endl;
 
     for (auto i = 0; i < diskLevels.size(); i++) {
       std::cout << "Number of Elements in Disk Level: " << i
-                << "(including deletes): " << diskLevels[i]->num_elements()
+                << "(including deletes): " << diskLevels[i]->eltsNums()
                 << std::endl;
     }
     std::cout << "KEY VALUE DUMP BY LEVEL" << std::endl;
@@ -224,9 +223,9 @@ class LSM {
     if (level == _numDiskLevels) {
       DiskLevel<K, V> *newlevel = new DiskLevel<K, V>(
           _blockSize, level + 1,
-          diskLevels[level - 1]->_runSize * diskLevels[level - 1]->mergeSize,
+          diskLevels[level - 1]->_runSize * diskLevels[level - 1]->_mergeSize,
           _diskRunsPerLevel, ceil(_diskRunsPerLevel * _fracRunsMerged),
-          _bfFalsePostive);
+          _bfFalsePositive);
       diskLevels.push_back(newlevel);
       _numDiskLevels++;
     }
@@ -245,12 +244,13 @@ class LSM {
     diskLevels[level]->addRuns(runs_to_merge, runLen, isLastLevel);
     diskLevels[level - 1]->freeMergedRuns(runs_to_merge);
   }
+
   void mergeRuns(std::vector<Run<K, V> *> runs_to_merge,
                  std::vector<BloomFilter<K> *> bf_to_merge) {
     std::vector<kvPair<K, V>> to_merge = std::vector<kvPair<K, V>>();
-    to_merge.reverse(_eltsPerRun * _numToMerge);
+    to_merge.reserve(_eltsPerRun * _numToMerge);
     for (auto i = 0; i < runs_to_merge.size(); i++) {
-      auto all = runs_to_merge[i]->GetAll();
+      auto all = runs_to_merge[i]->getAll();
 
       to_merge.insert(to_merge.begin(), all.begin(), all.end());
       delete runs_to_merge[i];
@@ -288,18 +288,18 @@ class LSM {
     _activeRunIdx -= _numToMerge;
     for (auto i = _activeRunIdx; i < _numRuns; i++) {
       RunType *run = new RunType(INT32_MIN, INT32_MAX);
-      run->SetSize(_eltsPerRun);
+      run->setSize(_eltsPerRun);
       C_0.push_back(run);
 
-      BloomFilter<K> *bf = new BloomFilter<K>(_eltsPerRun, _bfFalsePostive);
+      BloomFilter<K> *bf = new BloomFilter<K>(_eltsPerRun, _bfFalsePositive);
       filters.push_back(bf);
     }
   }
 
-  UL num_buffer() {
+  UL bufferNums() {
     if (mergeThread.joinable()) mergeThread.join();
     UL sum = 0;
-    for (auto i = 0; i <= _activeRunIdx; i++) sum += C_0[i]->num_elements();
+    for (auto i = 0; i <= _activeRunIdx; i++) sum += C_0[i]->eltsNums();
     return sum;
   }
 

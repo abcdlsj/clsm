@@ -78,7 +78,7 @@ class HashTable {
     }
   }
 
-  V putAndReturnValue(const K &key, const V &value) {
+  V putIfEmpty(const K &key, const V &value) {
     if (_elts * 2 > _size) {
       resize();
     }

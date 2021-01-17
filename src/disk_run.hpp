@@ -31,13 +31,13 @@ class DiskRun {
   K minKey = INT_MIN, maxKey = INT_MAX;
 
   DiskRun<K, V>(UL capacity, unsigned int blockSize, int level, int runID,
-                double bfFalsePostive)
+                double bfFalsePositive)
       : _capacity(capacity),
         _level(level),
         _maxFP(0),
         _blockSize(blockSize),
-        _bfFalsePostive(bfFalsePostive),
-        bf(capacity, _bfFalsePostive) {
+        _bfFalsePositive(bfFalsePositive),
+        bf(capacity, _bfFalsePositive) {
     _filename =
         "c_" + std::to_string(level) + "_" + std::to_string(runID) + ".clsm";
 
@@ -95,7 +95,7 @@ class DiskRun {
   }
 
   void constructIndex() {
-    _fencePointers.reverse(_capacity / _blockSize);
+    _fencePointers.reserve(_capacity / _blockSize);
     _maxFP = -1;
 
     for (auto i = 0; i < _capacity; i++) {
@@ -215,7 +215,7 @@ class DiskRun {
   std::vector<K> _fencePointers;
   unsigned int _maxFP;
   unsigned int _runID;
-  double _bfFalsePostive;  // bloom filter false positive
+  double _bfFalsePositive;  // bloom filter false positive
 
   void doMunmap() {
     size_t filesize = _capacity * sizeof(KVPair_t);

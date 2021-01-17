@@ -22,19 +22,19 @@ class kvPair {
   bool operator>(kvPair kv) const { return key > kv.key; }
 };
 
-// Run 代表了 LSM Tree 的执行单元
+// Run 是 LSM 的最小单元
 template <class K, class V>
 class Run {
  public:
-  virtual K GetMin() = 0;
-  virtual K GetMax() = 0;
-  virtual void InsertKey(const K &key, const V &value) = 0;
-  virtual void DeleteKey(const K &key) = 0;
-  virtual V Search(const K &key, bool &isFound) = 0;
-  virtual ULL NumElements() = 0;
-  virtual void SetSize(unsigned long size) = 0;
-  virtual std::vector<kvPair<K, V>> GetAll() = 0;
-  virtual std::vector<kvPair<K, V>> GetAllInRange(const K &k1, const K &k2) = 0;
+  virtual K getMin() = 0;
+  virtual K getMax() = 0;
+  virtual void insertKey(const K &key, const V &value) = 0;
+  virtual void deleteKey(const K &key) = 0;
+  virtual V search(const K &key, bool &isFound) = 0;
+  virtual ULL eltsNums() = 0;
+  virtual void setSize(const UL size) = 0;
+  virtual std::vector<kvPair<K, V>> getAll() = 0;
+  virtual std::vector<kvPair<K, V>> getAllInRange(const K &k1, const K &k2) = 0;
   virtual ~Run() = default;
 };
 
