@@ -39,9 +39,9 @@ void bloomFilterTest() {
             << std::endl;
   int fp = 0;
   for (int i = num_inserts; i < 2 * num_inserts; i++) {
-    bool lookup = bf.isContained(&i, sizeof(i));
+    bool lookup = bf.isContain(&i, sizeof(i));
     if (lookup) {
-      std::cout << i << "found but didn't exist" << std::endl;
+      std::cout << i << " found but didn't exist" << std::endl;
       fp++;
     }
   }
@@ -53,32 +53,29 @@ void insertLookupTest() {
   std::random_device rand_dev;
   std::mt19937 generator(rand_dev());
   std::uniform_int_distribution<int> distribution(INT32_MIN, INT32_MAX);
-  //    std::normal_distribution<double>  distribution(0, 10000000);
 
   const int num_inserts = 1000000;
   const int num_runs = 20;
   const int buffer_capacity = 800;
   const double bf_fp = .001;
-  const int pageSize = 512;
+  const int blockSize = 512;
   const int disk_runs_per_level = 20;
   const double merge_fraction = 1;
   LSM<int32_t, int32_t> lsmTree =
       LSM<int32_t, int32_t>(buffer_capacity, num_runs, merge_fraction, bf_fp,
-                            pageSize, disk_runs_per_level);
+                            blockSize, disk_runs_per_level);
 
   std::vector<int> to_insert;
   for (int i = 0; i < num_inserts; i++) {
     int insert = static_cast<int>(distribution(generator));
     to_insert.push_back(insert);
   }
-  //    shuffle(to_insert.begin(), to_insert.end(), generator);
 
   std::cout << "Starting inserts" << std::endl;
   clock_gettime(CLOCK_MONOTONIC, &start);
   for (int i = 0; i < num_inserts; i++) {
     if (i % 100000 == 0) cout << "insert " << i << endl;
     lsmTree.insertKey(to_insert[i], i);
-    //        lsmTree.printElts();
   }
   clock_gettime(CLOCK_MONOTONIC, &finish);
   double total_insert = (finish.tv_sec - start.tv_sec);
@@ -93,7 +90,6 @@ void insertLookupTest() {
   int lookup;
   for (int i = 0; i < num_inserts; i++) {
     if (i % 100000 == 0) cout << "lookup " << i << endl;
-
     lsmTree.search(to_insert[i], lookup);
   }
   clock_gettime(CLOCK_MONOTONIC, &finish);
@@ -104,4 +100,9 @@ void insertLookupTest() {
             << std::endl;
 }
 
-int main() {}
+int main() {
+  std::cout << "BLOOM FILTER TEST:\n";
+  bloomFilterTest();
+//  std::cout << "INSERT & SEARCH TEST:\n";
+//  insertLookupTest();
+}

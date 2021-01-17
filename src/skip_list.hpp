@@ -158,7 +158,7 @@ class SkipList : public Run<K, V> {
   void setSize(const unsigned long size) { _maxSize = size; }
   size_t getBytesSize() { return _n * (sizeof(K) + sizeof(V)); }
 
-  std::vector<kvPair<K, V>> GetAll() {
+  std::vector<kvPair<K, V>> getAll() {
     std::vector<kvPair<K, V>> ret = std::vector<kvPair<K, V>>();
     Node *node = p_listHead->_forward[1];
     while (node != p_listTail) {

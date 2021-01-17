@@ -37,7 +37,7 @@ class DiskRun {
         _maxFP(0),
         _blockSize(blockSize),
         _bfFalsePositive(bfFalsePositive),
-        bf(capacity, _bfFalsePositive) {
+        bf(capacity, bfFalsePositive) {
     _filename =
         "c_" + std::to_string(level) + "_" + std::to_string(runID) + ".clsm";
 

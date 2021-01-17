@@ -1,12 +1,13 @@
 #ifndef LSMTREE_LSM_HPP
 #define LSMTREE_LSM_HPP
 
+#include <algorithm>
 #include <mutex>
 #include <thread>
 
 #include "bloom_filter.hpp"
 #include "disk_level.hpp"
-#include "hash_map"
+#include "hash_map.hpp"
 #include "run.hpp"
 #include "skip_list.hpp"
 
@@ -49,7 +50,7 @@ class LSM {
         _bfFalsePositive(bfFalsePostive),
         _activeRunIdx(0),
         _n(0) {
-    DiskLevel<K, V> &diskLevel = new DiskLevel<K, V>(
+    DiskLevel<K, V> *diskLevel = new DiskLevel<K, V>(
         blockSize, 1, _numToMerge * _eltsPerRun, _diskRunsPerLevel,
         ceil(_diskRunsPerLevel * _fracRunsMerged), _bfFalsePositive);
 
@@ -97,9 +98,9 @@ class LSM {
 
   bool search(K &key, V &value) {
     bool isFound = false;
-    for (auto i = _activeRunIdx; i >= 0; i--) {
+    for (int i = _activeRunIdx; i >= 0; i--) {
       if (key < C_0[i]->getMin() || key > C_0[i]->getMax() ||
-          !filters[i]->isContained(&key, sizeof(key))) {
+          !filters[i]->isContain(&key, sizeof(K))) {
         continue;
       }
 
@@ -133,7 +134,7 @@ class LSM {
     auto hashtable = HashTable<K, V>(4096 * 1000);
     std::vector<kvPair<K, V>> elts_in_range = std::vector<kvPair<K, V>>();
 
-    for (auto i = _activeRunIdx; i >= 0; i--) {
+    for (int i = _activeRunIdx; i >= 0; i--) {
       std::vector<kvPair<K, V>> cur_elts = C_0[i]->getAllInRange(k1, k2);
       if (cur_elts.size() != 0) {
         elts_in_range.reserve(elts_in_range.size() + cur_elts.size());

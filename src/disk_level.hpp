@@ -204,9 +204,9 @@ class DiskLevel {
 
   V search(const K &key, bool &isFound) {
     int maxRunToSearch = _activeRunIdx - 1;
-    for (auto i = maxRunToSearch; i >= 0; i--) {
+    for (int i = maxRunToSearch; i >= 0; i--) {
       if (runs[i]->maxKey == INT_MIN || key < runs[i]->minKey ||
-          key > runs[i]->maxKey || !runs[i]->bf.isContained(&key, sizeof(key))) {
+          key > runs[i]->maxKey || !runs[i]->bf.isContain(&key, sizeof(K))) {
         continue;
       }
 
