@@ -21,29 +21,50 @@ template <class K, class V>
 class DiskRun {
   friend class DiskLevel<K, V>;
 
+ private:
+  long _capacity;
+  std::string _filename;
+  std::vector<K> _fencePointers;
+  int _maxFP;
+  int _runID;
+  int _level;
+
+  double _bfFalsePositive;  // bloom filter false positive
+
+  void doMunmap() {
+    size_t filesize = _capacity * sizeof(KVPair_t);
+
+    if (munmap(map, filesize) == -1) {
+      perror("Error un-mmapping the file");
+    }
+
+    close(fd);
+    fd = -2;  // 设置成 -2，和错误的 -1 区分开
+  }
+
  public:
   typedef kvPair<K, V> KVPair_t;
   KVPair_t *map;
   int fd;
-  unsigned int _blockSize;
+  int _blockSize;
   BloomFilter<K> bf;
 
   K minKey = INT_MIN, maxKey = INT_MAX;
 
-  DiskRun<K, V>(UL capacity, unsigned int blockSize, int level, int runID,
+  DiskRun<K, V>(long capacity, int blockSize, int level, int runID,
                 double bfFalsePositive)
       : _capacity(capacity),
         _level(level),
         _maxFP(0),
-        _blockSize(blockSize),
         _bfFalsePositive(bfFalsePositive),
+        _blockSize(blockSize),
         bf(capacity, bfFalsePositive) {
     _filename =
-        "c_" + std::to_string(level) + "_" + std::to_string(runID) + ".clsm";
+        "C_" + std::to_string(level) + "_" + std::to_string(runID) + ".clsm";
 
     size_t filesize = capacity * sizeof(KVPair_t);
 
-    LL result;
+    long long ret;
 
     fd = open(_filename.c_str(), O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
 
@@ -52,15 +73,15 @@ class DiskRun {
       exit(EXIT_FAILURE);
     }
 
-    result = lseek(fd, filesize - 1, SEEK_SET);
-    if (result == -1) {
+    ret = lseek(fd, filesize - 1, SEEK_SET);
+    if (ret == -1) {
       close(fd);
       perror("Error calling lseek() to 'stretch' the file");
       exit(EXIT_FAILURE);
     }
 
-    result = write(fd, "", 1);
-    if (result != 1) {
+    ret = write(fd, "", 1);
+    if (ret != 1) {
       close(fd);
       perror("Error writing last byte of the file");
       exit(EXIT_FAILURE);
@@ -85,11 +106,11 @@ class DiskRun {
     }
   }
 
-  void setCapacity(const UL newCapacity) { _capacity = newCapacity; }
+  void setCapacity(const long newCapacity) { _capacity = newCapacity; }
 
-  auto getCapacity() { return _capacity; }
+  long getCapacity() { return _capacity; }
 
-  void writeData(const KVPair_t *run, const size_t offset, const UL len) {
+  void writeData(const KVPair_t *run, const size_t offset, const long len) {
     memcpy(map + offset, run, len * sizeof(KVPair_t));
     _capacity = len;
   }
@@ -114,12 +135,13 @@ class DiskRun {
     maxKey = map[_capacity - 1].key;
   }
 
-  UL binarySearch(const UL offset, const UL n, const K &key, bool &isFound) {
+  long binarySearch(const long offset, const long n, const K &key,
+                    bool &isFound) {
     if (n == 0) {
       isFound = true;
       return offset;
     }
-    UL le = offset, ri = offset + n - 1, mid;
+    long le = offset, ri = offset + n - 1, mid;
     while (le < ri) {
       mid = le + (ri - le) / 2;
       if (key > map[mid].key) {
@@ -134,7 +156,7 @@ class DiskRun {
     return le;
   }
 
-  void getFencePointers(const K &key, UL &start, UL &end) {
+  void getFencePointers(const K &key, long &start, long &end) {
     if (_maxFP == 0) {
       start = 0;
       end = _capacity;
@@ -145,7 +167,7 @@ class DiskRun {
       start = _blockSize * _maxFP;
       end = _capacity;
     } else {
-      unsigned int le = 0, ri = _maxFP, mid;
+      int le = 0, ri = _maxFP, mid;
       while (le < ri) {
         mid = le + (ri - le) / 2;
         if (key > _fencePointers[mid]) {
@@ -171,20 +193,20 @@ class DiskRun {
     }
   }
 
-  UL getIndex(const K &key, bool &isFound) {
-    UL start, end;
+  long getIndex(const K &key, bool &isFound) {
+    long start, end;
     getFencePointers(key, start, end);
-    UL ret = binarySearch(start, end - start, key, isFound);
+    long ret = binarySearch(start, end - start, key, isFound);
     return ret;
   }
 
   V search(const K &key, bool &isFound) {
-    UL idx = getIndex(key, isFound);
+    long idx = getIndex(key, isFound);
     V ret = map[idx].value;
     return isFound ? ret : static_cast<V>(NULL);
   }
 
-  void getRangeIndex(const K &k1, const K &k2, UL &idx1, UL idx2) {
+  void getRangeIndex(const K &k1, const K &k2, long &idx1, long idx2) {
     idx1 = 0, idx2 = 0;
 
     if (k1 > maxKey || k2 < minKey) {
@@ -206,26 +228,6 @@ class DiskRun {
   void printAll() {
     for (auto i = 0; i < _capacity; i++) std::cout << map[i].key << " ";
     std::cout << std::endl;
-  }
-
- private:
-  UL _capacity;
-  std::string _filename;
-  int _level;
-  std::vector<K> _fencePointers;
-  unsigned int _maxFP;
-  unsigned int _runID;
-  double _bfFalsePositive;  // bloom filter false positive
-
-  void doMunmap() {
-    size_t filesize = _capacity * sizeof(KVPair_t);
-
-    if (munmap(map, filesize) == -1) {
-      perror("Error un-mmapping the file");
-    }
-
-    close(fd);
-    fd = -2;  // 设置成 -2，和错误的 -1 去分开
   }
 };
 

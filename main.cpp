@@ -100,9 +100,9 @@ void insertLookupTest() {
             << std::endl;
 }
 
-int main() {
-  std::cout << "BLOOM FILTER TEST:\n";
-  bloomFilterTest();
-//  std::cout << "INSERT & SEARCH TEST:\n";
-//  insertLookupTest();
+int main(int argc, char* argv[]) {
+  //  std::cout << "BLOOM FILTER TEST:\n";
+  //  bloomFilterTest();
+   std::cout << "INSERT & SEARCH TEST:\n";
+   insertLookupTest();
 }

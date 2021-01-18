@@ -11,19 +11,19 @@
 std::default_random_engine generator;
 std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
-template <class K, class V, unsigned int MAXLEAVEL>
+template <class K, class V, int MAXLEVEL>
 class SNode {
  public:
   const K key;
   V value;
-  SNode<K, V, MAXLEAVEL> *_forward[MAXLEAVEL + 1];
+  SNode<K, V, MAXLEVEL> *_forward[MAXLEVEL + 1];
   SNode(const K _key) : key(_key) {
-    for (int i = 1; i <= MAXLEAVEL; i++) {
+    for (int i = 1; i <= MAXLEVEL; i++) {
       _forward[i] = nullptr;
     }
   }
   SNode(const K _key, V _value) : key(_key), value(_value) {
-    for (int i = 1; i <= MAXLEAVEL; i++) {
+    for (int i = 1; i <= MAXLEVEL; i++) {
       _forward[i] = nullptr;
     }
   }
@@ -38,21 +38,21 @@ class SkipList : public Run<K, V> {
   K _min, _max;
 
   K minKey, maxKey;
-  ULL _n;
+  long long _n;
   size_t _maxSize;
   int curMaxLevel;
   Node *p_listHead, *p_listTail;
 
   SkipList(const K minKey, const K maxKey)
-      : p_listHead(nullptr),
-        p_listTail(nullptr),
-        curMaxLevel(1),
-        maxLevel(MAXLEVEL),
+      : maxLevel(MAXLEVEL),
         _min(static_cast<K>(NULL)),
         _max(static_cast<K>(NULL)),
         minKey(minKey),
         maxKey(maxKey),
-        _n(0) {
+        _n(0),
+        curMaxLevel(1),
+        p_listHead(nullptr),
+        p_listTail(nullptr) {
     p_listHead = new Node(minKey);
     p_listTail = new Node(maxKey);
     for (int i = 1; i <= maxLevel; i++) {
@@ -90,7 +90,7 @@ class SkipList : public Run<K, V> {
     if (curNode->key == iKey) {
       curNode->value = iValue;
     } else {
-      int insert_level = GenNodeLevel();
+      int insert_level = genNodeLevel();
       if (insert_level > curMaxLevel && insert_level < MAXLEVEL - 1) {
         for (int level = curMaxLevel + 1; level <= insert_level; level++) {
           update[level] = p_listHead;
@@ -154,8 +154,8 @@ class SkipList : public Run<K, V> {
   }
 
   bool isEmpty() { return p_listHead->_forward[0] == p_listTail; }
-  ULL eltsNums() { return _n; }
-  void setSize(const unsigned long size) { _maxSize = size; }
+  long long eltsNums() { return _n; }
+  void setSize(const long size) { _maxSize = size; }
   size_t getBytesSize() { return _n * (sizeof(K) + sizeof(V)); }
 
   std::vector<kvPair<K, V>> getAll() {
@@ -187,7 +187,7 @@ class SkipList : public Run<K, V> {
     return ret;
   }
 
-  int GenNodeLevel() { return ffs(rand() & ((1 << MAXLEVEL) - 1)) - 1; }
+  int genNodeLevel() { return ffs(rand() & ((1 << MAXLEVEL) - 1)) - 1; }
 };
 
 #endif  // LSMTREE_SKIP_LIST_HPP

@@ -3,10 +3,6 @@
 
 #include <vector>
 
-typedef long long LL;
-typedef unsigned long UL;
-typedef unsigned long long ULL;
-
 template <typename K, typename V>
 class kvPair {
  public:
@@ -31,8 +27,8 @@ class Run {
   virtual void insertKey(const K &key, const V &value) = 0;
   virtual void deleteKey(const K &key) = 0;
   virtual V search(const K &key, bool &isFound) = 0;
-  virtual ULL eltsNums() = 0;
-  virtual void setSize(const UL size) = 0;
+  virtual long long eltsNums() = 0;
+  virtual void setSize(const long size) = 0;
   virtual std::vector<kvPair<K, V>> getAll() = 0;
   virtual std::vector<kvPair<K, V>> getAllInRange(const K &k1, const K &k2) = 0;
   virtual ~Run() = default;

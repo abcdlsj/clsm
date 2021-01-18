@@ -14,7 +14,7 @@
 #define RIGHTCHILD(x) 2 * x + 2
 #define PARENT(x) (x - 1) / 2
 
-int STONE = INT_MIN;
+int TOMBSTONE = INT_MIN;
 
 template <class K, class V>
 class DiskLevel {
@@ -23,20 +23,20 @@ class DiskLevel {
   typedef std::pair<kvPair<K, V>, int> KVIntPair_t;
   KVPair_t KVPMAX;
   KVIntPair_t KVPINTMAX;
-  V V_STONE = static_cast<V>(STONE);
+  V V_TOMBSTONE = static_cast<V>(TOMBSTONE); // 墓碑机制
 
   struct StaticHead {
     int size;
     std::vector<KVIntPair_t> arr;
     KVIntPair_t max;
-    StaticHead(unsigned int sz, KVIntPair_t mx) {
+    StaticHead(int sz, KVIntPair_t mx) {
       size = 0;
       arr = std::vector<KVIntPair_t>(sz, mx);
       max = mx;
     }
 
     void push(KVIntPair_t blob) {
-      unsigned int idx = size++;
+      int idx = size++;
       while (idx && blob < arr[PARENT(idx)]) {
         arr[idx] = arr[PARENT(idx)];
         idx = PARENT(idx);
@@ -70,18 +70,19 @@ class DiskLevel {
   };
 
   int _level;
-  unsigned int _blockSize;     // number of elements per fence pointer;
-  unsigned int _numRuns;       // number of runs in a level;
-  unsigned int _activeRunIdx;  // index of active run;
-  unsigned int _mergeSize;     // # of runs to merge downloads;
-  UL _runSize;                 // number of elements in a run;
+  int _blockSize;     // number of elements per fence pointer;
+  int _numRuns;       // number of runs in a level;
+  int _activeRunIdx;  // index of active run;
+  int _mergeSize;     // # of runs to merge downloads;
+
+  long _runSize;  // number of elements in a run;
+
   double _bfFalsePositive;
 
   std::vector<DiskRun<K, V> *> runs;
 
-  DiskLevel<K, V>(unsigned int blockSize, int level, UL runSize,
-                  unsigned int numRuns, unsigned int mergeSize,
-                  double bfFalsePositive)
+  DiskLevel<K, V>(int blockSize, int level, long runSize, int numRuns,
+                  int mergeSize, double bfFalsePositive)
       : _blockSize(blockSize),
         _level(level),
         _runSize(runSize),
@@ -103,19 +104,19 @@ class DiskLevel {
     }
   }
 
-  void addRuns(std::vector<DiskRun<K, V> *> &runList, const UL runlen,
+  void addRuns(std::vector<DiskRun<K, V> *> &runList, const long runlen,
                bool isLastLevel) {
     StaticHead h = StaticHead(static_cast<int>(runlen), KVPINTMAX);
 
     std::vector<int> heads(runList.size(), 0);
-    for (auto i = 0; i < runList.size(); i++) {
+    for (int i = 0; i < runList.size(); i++) {
       KVPair_t kvp = runList[i]->map[0];
       h.push(KVIntPair_t(kvp, i));
     }
 
     int j = -1;
     K lastKey = INT_MAX;
-    unsigned int lastK = INT_MIN;
+    int lastK = INT_MIN;
     while (h.size != 0) {
       auto val_run_pair = h.pop();
       if (lastKey == val_run_pair.first.key) {
@@ -125,7 +126,7 @@ class DiskLevel {
       } else {
         ++j;
         if (j != -1 && isLastLevel &&
-            runs[_activeRunIdx]->map[j].value == V_STONE) {
+            runs[_activeRunIdx]->map[j].value == V_TOMBSTONE) {
           --j;
         }
         runs[_activeRunIdx]->map[j] = val_run_pair.first;
@@ -133,14 +134,14 @@ class DiskLevel {
       lastKey = val_run_pair.first.key;
       lastK = val_run_pair.second;
 
-      unsigned int k = val_run_pair.second;
+      int k = val_run_pair.second;
       if (++heads[k] < runList[k]->getCapacity()) {
         KVPair_t kvp = runList[k]->map[heads[k]];
         h.push(KVIntPair_t(kvp, k));
       }
     }
 
-    if (isLastLevel && runs[_activeRunIdx]->map[j].value == V_STONE) {
+    if (isLastLevel && runs[_activeRunIdx]->map[j].value == V_TOMBSTONE) {
       --j;
     }
 
@@ -152,7 +153,7 @@ class DiskLevel {
     }
   }
 
-  void addRunByArray(KVPair_t *runToAdd, const UL runlen) {
+  void addRunByArray(KVPair_t *runToAdd, const long runlen) {
     assert(_activeRunIdx < _numRuns);
     assert(runlen == _runSize);
     runs[_activeRunIdx]->writeData(runToAdd, 0, runlen);
@@ -162,7 +163,7 @@ class DiskLevel {
 
   std::vector<DiskRun<K, V> *> getRunsToMerge() {
     std::vector<DiskRun<K, V> *> toMerge;
-    for (auto i = 0; i < _mergeSize; i++) {
+    for (int i = 0; i < _mergeSize; i++) {
       toMerge.push_back(runs[i]);
     }
 
@@ -198,7 +199,7 @@ class DiskLevel {
     }
   }
 
-  bool isLevelFull() { return _activeRunIdx == _numRuns; }
+  bool isLevelFlongl() { return _activeRunIdx == _numRuns; }
 
   bool isLevelEmpty() { return _activeRunIdx == 0; }
 
@@ -219,8 +220,8 @@ class DiskLevel {
     return static_cast<V>(NULL);
   }
 
-  UL eltsNums() {
-    UL sum = 0;
+  long eltsNums() {
+    long sum = 0;
     for (auto i = 0; i < _activeRunIdx; i++) sum += runs[i]->getCapacity();
     return sum;
   }

@@ -14,23 +14,24 @@
 template <class K, class V>
 class LSM {
   typedef SkipList<K, V> RunType;
-  UL _eltsPerRun;
-  UL _n;
+
+  long _eltsPerRun;
+  long _n;
+
   double _fracRunsMerged;
-
   double _bfFalsePositive;
-  unsigned int _activeRunIdx;
 
-  unsigned int _numRuns;
-  unsigned int _numDiskLevels;
-  unsigned int _diskRunsPerLevel;
-  unsigned int _numToMerge;
-  unsigned int _blockSize;
+  int _activeRunIdx;
+  int _numRuns;
+  int _numDiskLevels;
+  int _diskRunsPerLevel;
+  int _numToMerge;
+  int _blockSize;
 
   std::thread mergeThread;
 
  public:
-  V V_STONE = static_cast<V>(STONE);
+  V V_TOMBSTONE = static_cast<V>(TOMBSTONE);
   std::mutex *mergeLock;
   std::vector<Run<K, V> *> C_0;
   std::vector<BloomFilter<K> *> filters;
@@ -38,16 +39,15 @@ class LSM {
   LSM<K, V>(const LSM<K, V> &other) = default;
   LSM<K, V>(LSM<K, V> &&other) = default;
 
-  LSM<K, V>(UL eltsPerRun, unsigned int numRuns, double fracMerged,
-            double bfFalsePostive, unsigned int blockSize,
-            unsigned int diskRunsPerLevel)
+  LSM<K, V>(long eltsPerRun, int numRuns, double fracMerged,
+            double bfFalsePositive, int blockSize, int diskRunsPerLevel)
       : _eltsPerRun(eltsPerRun),
         _numRuns(numRuns),
         _fracRunsMerged(fracMerged),
         _diskRunsPerLevel(diskRunsPerLevel),
         _numToMerge(ceil(_fracRunsMerged * _numRuns)),
         _blockSize(blockSize),
-        _bfFalsePositive(bfFalsePostive),
+        _bfFalsePositive(bfFalsePositive),
         _activeRunIdx(0),
         _n(0) {
     DiskLevel<K, V> *diskLevel = new DiskLevel<K, V>(
@@ -106,7 +106,7 @@ class LSM {
 
       value = C_0[i]->search(key, isFound);
       if (isFound) {
-        return value != V_STONE;
+        return value != V_TOMBSTONE;
       }
     }
 
@@ -117,14 +117,14 @@ class LSM {
     for (auto i = 0; i < _numDiskLevels; i++) {
       value = diskLevels[i]->search(key, isFound);
       if (isFound) {
-        return value != V_STONE;
+        return value != V_TOMBSTONE;
       }
     }
 
     return false;
   }
 
-  void deleteKey(K &key) { insertKey(key, V_STONE); }
+  void deleteKey(K &key) { insertKey(key, V_TOMBSTONE); }
 
   std::vector<kvPair<K, V>> range(K &k1, K &k2) {
     if (k2 <= k1) {
@@ -141,7 +141,7 @@ class LSM {
 
         for (auto j = 0; j < cur_elts.size(); j++) {
           V dummy = hashtable.putIfEmpty(cur_elts[j].key, cur_elts[j].value);
-          if (!dummy && cur_elts[j].value != V_STONE) {
+          if (!dummy && cur_elts[j].value != V_TOMBSTONE) {
             elts_in_range.push_back(cur_elts[j]);
           }
         }
@@ -154,16 +154,16 @@ class LSM {
 
     for (auto i = 0; i < _numDiskLevels; i++) {
       for (auto j = diskLevels[i]->_activeRunIdx - 1; j >= 0; j--) {
-        UL i1, i2;
-        diskLevels[i]->runs[j]->range(k1, k2, i1, i2);
+        long i1, i2;
+        diskLevels[i]->runs[j]->getRangeIndex(k1, k2, i1, i2);
 
         if (i2 - i1 != 0) {
           auto oldSize = elts_in_range.size();
-          elts_in_range.reverse(oldSize + (i2 - i1));
-          for (UL k = i1; k < i2; k++) {
+          elts_in_range.reserve(oldSize + (i2 - i1));
+          for (long k = i1; k < i2; k++) {
             auto kv = diskLevels[i]->runs[j]->map[k];
             V dummy = hashtable.putIfEmpty(kv.key, kv.value);
-            if (!dummy && kv.value != V_STONE) {
+            if (!dummy && kv.value != V_TOMBSTONE) {
               elts_in_range.push_back(kv);
             }
           }
@@ -207,7 +207,7 @@ class LSM {
     std::cout << "Number of Elements in Buffer (including deletes): "
               << bufferNums() << std::endl;
 
-    for (auto i = 0; i < diskLevels.size(); i++) {
+    for (int i = 0; i < diskLevels.size(); i++) {
       std::cout << "Number of Elements in Disk Level: " << i
                 << "(including deletes): " << diskLevels[i]->eltsNums()
                 << std::endl;
@@ -217,21 +217,21 @@ class LSM {
   }
 
   //
-
+  //
   void mergeRunsToLevel(int level) {
     bool isLastLevel = false;
 
     if (level == _numDiskLevels) {
-      DiskLevel<K, V> *newlevel = new DiskLevel<K, V>(
+      DiskLevel<K, V> *newLevel = new DiskLevel<K, V>(
           _blockSize, level + 1,
           diskLevels[level - 1]->_runSize * diskLevels[level - 1]->_mergeSize,
           _diskRunsPerLevel, ceil(_diskRunsPerLevel * _fracRunsMerged),
           _bfFalsePositive);
-      diskLevels.push_back(newlevel);
+      diskLevels.push_back(newLevel);
       _numDiskLevels++;
     }
 
-    if (diskLevels[level]->isLevelFull()) {
+    if (diskLevels[level]->isLevelFlongl()) {
       mergeRunsToLevel(level + 1);
     }
 
@@ -241,7 +241,7 @@ class LSM {
 
     std::vector<DiskRun<K, V> *> runs_to_merge =
         diskLevels[level - 1]->getRunsToMerge();
-    UL runLen = diskLevels[level - 1]->_runSize;
+    long runLen = diskLevels[level - 1]->_runSize;
     diskLevels[level]->addRuns(runs_to_merge, runLen, isLastLevel);
     diskLevels[level - 1]->freeMergedRuns(runs_to_merge);
   }
@@ -251,16 +251,16 @@ class LSM {
     std::vector<kvPair<K, V>> to_merge = std::vector<kvPair<K, V>>();
     to_merge.reserve(_eltsPerRun * _numToMerge);
     for (auto i = 0; i < runs_to_merge.size(); i++) {
-      auto all = runs_to_merge[i]->getAll();
+      auto all = (runs_to_merge)[i]->getAll();
 
       to_merge.insert(to_merge.begin(), all.begin(), all.end());
-      delete runs_to_merge[i];
-      delete bf_to_merge[i];
+      delete (runs_to_merge)[i];
+      delete (bf_to_merge)[i];
     }
 
     sort(to_merge.begin(), to_merge.end());
     mergeLock->lock();
-    if (diskLevels[0]->isLevelFull()) {
+    if (diskLevels[0]->isLevelFlongl()) {
       mergeRunsToLevel(1);
     }
     diskLevels[0]->addRunByArray(&to_merge[0], to_merge.size());
@@ -297,14 +297,14 @@ class LSM {
     }
   }
 
-  UL bufferNums() {
+  long bufferNums() {
     if (mergeThread.joinable()) mergeThread.join();
-    UL sum = 0;
+    long sum = 0;
     for (auto i = 0; i <= _activeRunIdx; i++) sum += C_0[i]->eltsNums();
     return sum;
   }
 
-  UL size() {
+  long size() {
     K min = INT_MIN, max = INT_MAX;
     auto r = range(min, max);
     return r.size();
