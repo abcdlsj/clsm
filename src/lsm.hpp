@@ -18,15 +18,15 @@ class LSM {
   long _eltsPerRun;
   long _n;
 
-  double _fracRunsMerged;
-  double _bfFalsePositive;
+  double _fracRunsMerged; // 合并的倍数
+  double _bfFalsePositive; // 过滤器假阳性的概率
 
   int _activeRunIdx;
-  int _numRuns;
+  int _numRuns; // 内存最大 run 数目
   int _numDiskLevels;
-  int _diskRunsPerLevel;
-  int _numToMerge;
-  int _blockSize;
+  int _diskRunsPerLevel; // 每层 level 数
+  int _numToMerge; // C_0 一次 Merge 的 runs 数
+  int _blockSize; //
 
   std::thread mergeThread;
 
@@ -216,8 +216,7 @@ class LSM {
     printElts();
   }
 
-  //
-  //
+  // 从 disk[level - 1] 中拿到 runs add 到当前 level 
   void mergeRunsToLevel(int level) {
     bool isLastLevel = false;
 
@@ -231,7 +230,7 @@ class LSM {
       _numDiskLevels++;
     }
 
-    if (diskLevels[level]->isLevelFlongl()) {
+    if (diskLevels[level]->isLevelFull()) {
       mergeRunsToLevel(level + 1);
     }
 
@@ -239,6 +238,7 @@ class LSM {
       isLastLevel = true;
     }
 
+    // 从 disklevel 中得到用于 merge 的 runs [0, _mergeSize)
     std::vector<DiskRun<K, V> *> runs_to_merge =
         diskLevels[level - 1]->getRunsToMerge();
     long runLen = diskLevels[level - 1]->_runSize;
@@ -246,6 +246,7 @@ class LSM {
     diskLevels[level - 1]->freeMergedRuns(runs_to_merge);
   }
 
+  // merge 的主函数，把 runs merge 到磁盘的最浅层级当中
   void mergeRuns(std::vector<Run<K, V> *> runs_to_merge,
                  std::vector<BloomFilter<K> *> bf_to_merge) {
     std::vector<kvPair<K, V>> to_merge = std::vector<kvPair<K, V>>();
@@ -260,13 +261,15 @@ class LSM {
 
     sort(to_merge.begin(), to_merge.end());
     mergeLock->lock();
-    if (diskLevels[0]->isLevelFlongl()) {
+    if (diskLevels[0]->isLevelFull()) {
       mergeRunsToLevel(1);
     }
     diskLevels[0]->addRunByArray(&to_merge[0], to_merge.size());
     mergeLock->unlock();
   }
 
+  // 从 memory 向 disk merge
+  // mergeruns 是 C_0 [0, _numToMerge)（bloomfilter 也一样需要 merge）
   void doMerge() {
     if (_numToMerge == 0) return;
     std::vector<Run<K, V> *> runs_to_merge = std::vector<Run<K, V> *>();

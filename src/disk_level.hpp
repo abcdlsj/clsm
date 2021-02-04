@@ -70,28 +70,28 @@ class DiskLevel {
   };
 
   int _level;
-  int _blockSize;     // number of elements per fence pointer;
-  int _numRuns;       // number of runs in a level;
-  int _activeRunIdx;  // index of active run;
-  int _mergeSize;     // # of runs to merge downloads;
+  int _blockSize;       // 每个 block 元素个数，per fence pointer
+  int _numRunsPerLevel; // 一层多少个 Runs
+  int _activeRunIdx;    // index of active run;
+  int _mergeSize;       // 向下合并的 runs 数
 
-  long _runSize;  // number of elements in a run;
+  long _runSize;        // 每个 runs 的元素个数;
 
-  double _bfFalsePositive;
+  double _bfFalsePositive; // 假阳性的概率
 
   std::vector<DiskRun<K, V> *> runs;
 
-  DiskLevel<K, V>(int blockSize, int level, long runSize, int numRuns,
+  DiskLevel<K, V>(int blockSize, int level, long runSize, int numRunsPerLevel,
                   int mergeSize, double bfFalsePositive)
       : _blockSize(blockSize),
         _level(level),
         _runSize(runSize),
-        _numRuns(numRuns),
+        _numRunsPerLevel(numRunsPerLevel),
         _mergeSize(mergeSize),
         _bfFalsePositive(bfFalsePositive) {
     KVPMAX = KVPair_t{INT_MAX, 0};
     KVPINTMAX = KVIntPair_t(KVPMAX, -1);
-    for (auto i = 0; i < _numRuns; i++) {
+    for (auto i = 0; i < _numRunsPerLevel; i++) {
       DiskRun<K, V> *run =
           new DiskRun<K, V>(_runSize, _blockSize, _level, i, _bfFalsePositive);
       runs.push_back(run);
@@ -104,6 +104,7 @@ class DiskLevel {
     }
   }
 
+  // 最小堆，每次都从一个 runs 中拿出一个最小值
   void addRuns(std::vector<DiskRun<K, V> *> &runList, const long runlen,
                bool isLastLevel) {
     StaticHead h = StaticHead(static_cast<int>(runlen), KVPINTMAX);
@@ -154,13 +155,14 @@ class DiskLevel {
   }
 
   void addRunByArray(KVPair_t *runToAdd, const long runlen) {
-    assert(_activeRunIdx < _numRuns);
+    assert(_activeRunIdx < _numRunsPerLevel);
     assert(runlen == _runSize);
     runs[_activeRunIdx]->writeData(runToAdd, 0, runlen);
     runs[_activeRunIdx]->constructIndex();
     _activeRunIdx++;
   }
 
+  // return runs [0, _mergeSize)
   std::vector<DiskRun<K, V> *> getRunsToMerge() {
     std::vector<DiskRun<K, V> *> toMerge;
     for (int i = 0; i < _mergeSize; i++) {
@@ -192,14 +194,14 @@ class DiskLevel {
       runs[i]->_filename = newName;
     }
 
-    for (auto i = _activeRunIdx; i < _numRuns; i++) {
+    for (auto i = _activeRunIdx; i < _numRunsPerLevel; i++) {
       DiskRun<K, V> *newRun =
           new DiskRun<K, V>(_runSize, _blockSize, _level, i, _bfFalsePositive);
       runs.push_back(newRun);
     }
   }
 
-  bool isLevelFlongl() { return _activeRunIdx == _numRuns; }
+  bool isLevelFull() { return _activeRunIdx == _numRunsPerLevel; }
 
   bool isLevelEmpty() { return _activeRunIdx == 0; }
 
