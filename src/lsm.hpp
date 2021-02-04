@@ -18,15 +18,15 @@ class LSM {
   long _eltsPerRun;
   long _n;
 
-  double _fracRunsMerged; // 合并的倍数
-  double _bfFalsePositive; // 过滤器假阳性的概率
+  double _fracRunsMerged; // 合并的倍数，(0, 1]
+  double _bfFalsePositive; // 假阳性的概率
 
   int _activeRunIdx;
   int _numRuns; // 内存最大 run 数目
   int _numDiskLevels;
   int _diskRunsPerLevel; // 每层 level 数
   int _numToMerge; // C_0 一次 Merge 的 runs 数
-  int _blockSize; //
+  int _blockSize;
 
   std::thread mergeThread;
 
@@ -269,7 +269,7 @@ class LSM {
   }
 
   // 从 memory 向 disk merge
-  // mergeruns 是 C_0 [0, _numToMerge)（bloomfilter 也一样需要 merge）
+  // mergeruns 是 C_0 [0, _numToMerge)
   void doMerge() {
     if (_numToMerge == 0) return;
     std::vector<Run<K, V> *> runs_to_merge = std::vector<Run<K, V> *>();
