@@ -186,7 +186,7 @@ class LSM {
       std::cout << std::endl;
     }
 
-    std::cout << "DSIK BUFFER:\n";
+    std::cout << "DISK BUFFER:\n";
     for (auto i = 0; i < _numDiskLevels; i++) {
       std::cout << "DISK LEVEL: " << i << std::endl;
       for (auto j = 0; j < diskLevels[i]->_activeRunIdx; j++) {

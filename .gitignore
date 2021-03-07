@@ -35,4 +35,5 @@
 build/*
 .idea/*
 cmake-build*/*
+cmake-build-debug/*
 C_*

@@ -91,7 +91,7 @@ class DiskRun {
                            0);
     if (map == MAP_FAILED) {
       close(fd);
-      perror("Error mmapping the file");
+      perror("Error in mmapping the file");
       exit(EXIT_FAILURE);
     }
   }
